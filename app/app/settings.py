@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "rest_framework",
     "rest_framework.authtoken",
-    "rest_framework_simplejwt",
     "dj_rest_auth",
     "dj_rest_auth.registration",
     "allauth",
@@ -159,7 +158,7 @@ DEFAULT_FROM_EMAIL = "Meat market <email>"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = os.getenv("EMAL_HOST_USER")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
 
@@ -174,12 +173,12 @@ REST_FRAMEWORK = {
 
 
 # Auth settings
-# AUTHENTICATION_BACKENDS = [
-#     # Needed to login by username in Django admin, regardless of `allauth`
-#     "django.contrib.auth.backends.ModelBackend",
-#     # `allauth` specific authentication methods, such as login by email
-#     "allauth.account.auth_backends.AuthenticationBackend",
-# ]
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    "django.contrib.auth.backends.ModelBackend",
+    # `allauth` specific authentication methods, such as login by email
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
 
 
 # dj_rest_auth settings
@@ -205,7 +204,8 @@ ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_CHANGE_EMAIL = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_USERNAME_REQUIRED = False
-
+ACCOUNT_ADAPTER = "users.adapters.CustomAccountAdapter"
+SOCIALACCOUNT_ADAPTER = "users.adapters.CustomSocialAccountAdapter"
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {

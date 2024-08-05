@@ -72,6 +72,5 @@ class GoogleCallbackView(APIView):
     def get(self, request):
         code = self.request.query_params.get("code")
         url = request.build_absolute_uri(reverse("google_login"))
-        print("+" * 300, code, url, sep="\n")
         # res = requests.post(url, {"code": code})
         return Response(code)
