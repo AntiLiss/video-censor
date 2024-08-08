@@ -24,7 +24,7 @@ class VideojobViewSet(
     serializer_class = VideoJobReadSerializer
 
     def get_serializer_class(self):
-        # Switch sterilizer depending on action
+        # Switch serializer when create action
         if self.action == "create":
             return VideoJobCreateSerializer
         return self.serializer_class

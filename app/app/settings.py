@@ -137,10 +137,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "/static/static/"
-STATIC_ROOT = os.path.join("vol", "web", "static")
+STATIC_ROOT = os.path.join("/", "vol", "web", "static")
 
 MEDIA_URL = "/static/media/"
-MEDIA_ROOT = os.path.join("vol", "web", "media")
+MEDIA_ROOT = os.path.join("/", "vol", "web", "media")
 
 
 # Default primary key field type
