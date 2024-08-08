@@ -1,3 +1,7 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import AudioSetting, VideoJob, VideoSetting
+
+admin.site.register(VideoJob)
+admin.site.register(AudioSetting)
+admin.site.register(VideoSetting)

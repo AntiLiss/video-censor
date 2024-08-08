@@ -1,15 +1,19 @@
 import requests
-from django.urls import reverse
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.account.utils import send_email_confirmation
-from allauth.socialaccount.models import EmailAddress
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from .serializers import EmailChangeSerializer, EmailChangeResponseSerializer
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from drf_spectacular.utils import extend_schema
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import Profile
+from .serializers import (EmailResponseSerializer, EmailSerializer,
+                          ProfileSerializer)
 
 
 class ConfirmEmailRedirectView(APIView):
@@ -42,11 +46,11 @@ class ConfirmEmailRedirectView(APIView):
 #         )
 
 
-class EmailChangeView(APIView):
+class EmailUpdateView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = EmailChangeSerializer
+    serializer_class = EmailSerializer
 
-    @extend_schema(responses=EmailChangeResponseSerializer)
+    @extend_schema(responses=EmailResponseSerializer)
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(
             instance=request.user,
@@ -74,3 +78,31 @@ class GoogleCallbackView(APIView):
         url = request.build_absolute_uri(reverse("google_login"))
         # res = requests.post(url, {"code": code})
         return Response(code)
+
+
+class ProfileCRUDView(
+    generics.CreateAPIView,
+    generics.RetrieveAPIView,
+    generics.UpdateAPIView,
+    generics.DestroyAPIView,
+):
+    """Manage CRUD operations on user's profile"""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileSerializer
+
+    def get_object(self):
+        return get_object_or_404(Profile, user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        # Report that user can have only one profile
+        if Profile.objects.filter(user=self.request.user):
+            return Response(
+                {"detail": "This user already has a profile!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        # Set user field to this user by default
+        return serializer.save(user=self.request.user)

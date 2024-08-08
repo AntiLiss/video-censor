@@ -1,20 +1,22 @@
 import os
 from uuid import uuid4
+
+from django.contrib.auth import get_user_model
 from django.db import models
 
 
-def get_uploaded_videofile_path(instance, filename):
-    """Generate videofile path with unique uuid filename"""
-    extension = os.path.splitext(filename)[1]
-    filename = f"{uuid4()}{extension}"
+def get_input_videofile_path(instance, filename):
+    """Generate path with unique filename for input video"""
+    # extension = os.path.splitext(filename)[1]
+    # filename = f"{uuid4()}{extension}"
     return os.path.join("uploads", "videos", filename)
 
 
-def get_processed_videofile_path(instance, filename):
-    """Generate video file path for processed video"""
+def get_output_videofile_path(instance, filename):
+    """Generate path with unique filename for output video"""
     extension = os.path.splitext(filename)[1]
-    filename = os.path.splitext(filename)[0] + "_censored" + extension
-    return os.path.join("uploads", "processed_videos", filename)
+    filename = filename + "_censored" + extension
+    return os.path.join("processed_videos", filename)
 
 
 class VideoJob(models.Model):
@@ -38,9 +40,19 @@ class VideoJob(models.Model):
         (RUSSIAN, "Russian"),
     )
 
-    videofile = models.FileField(upload_to=get_uploaded_videofile_path)
-    title = models.CharField(max_length=255)
-    size = models.FloatField(blank=True)
+    user = models.ForeignKey(
+        to=get_user_model(),
+        on_delete=models.CASCADE,
+    )
+    input_videofile = models.FileField(upload_to=get_input_videofile_path)
+    output_videofile = models.FileField(
+        upload_to=get_output_videofile_path,
+        blank=True,
+        null=True,
+    )
+    # TODO: Set to `filename` + "_censored" OR NOT??
+    title = models.CharField(max_length=255, blank=True)
+    size = models.FloatField(blank=True, null=True)
     language = models.CharField(max_length=2, choices=LANG_CHOICES)
     status = models.CharField(
         max_length=1,
@@ -50,12 +62,16 @@ class VideoJob(models.Model):
     )
     video_setting = models.ForeignKey(
         "VideoSetting",
+        null=True,
         on_delete=models.PROTECT,
     )
     audio_setting = models.ForeignKey(
         "AudioSetting",
+        null=True,
         on_delete=models.PROTECT,
     )
+
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class VideoSetting(models.Model):
@@ -63,16 +79,26 @@ class VideoSetting(models.Model):
     blood = models.BooleanField(default=False, blank=True)
     nudity = models.BooleanField(default=False, blank=True)
 
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
 class AudioSetting(models.Model):
     profanity = models.BooleanField(default=False, blank=True)
     xenophobia = models.BooleanField(default=False, blank=True)
-    # A list of own words, don't forget to check UNIQUENESS!
-    own_words = models.JSONField(default=list, blank=True)
+    own_words = models.TextField(
+        blank=True,
+        help_text="Comma separated string of words",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def get_own_word_set(self):
+        """Get set of of own words"""
+        return set(self.own_words.lower().split(","))
 
 
 # {
-#     "videofile": "my_video.mp4",
+#     "input_file": "my_video.mp4",
 #     "title": "my_video",
 #     "language": "EN",
 #     "video_setting": {"blood": true},

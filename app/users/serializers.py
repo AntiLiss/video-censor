@@ -1,9 +1,10 @@
+from dj_rest_auth.registration.serializers import RegisterSerializer
+from dj_rest_auth.serializers import LoginSerializer
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework import serializers
-from dj_rest_auth.serializers import LoginSerializer
-from dj_rest_auth.registration.serializers import RegisterSerializer
+
+from .models import Profile
 
 User = get_user_model()
 
@@ -39,15 +40,24 @@ class UserDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "email")
 
 
-class EmailChangeSerializer(serializers.ModelSerializer):
-    """Serializer to change email"""
+class EmailSerializer(serializers.ModelSerializer):
+    """Serializer to update user's email"""
 
     class Meta:
         model = User
         fields = ("email",)
 
 
-class EmailChangeResponseSerializer(serializers.Serializer):
+class EmailResponseSerializer(serializers.Serializer):
     """Custom response for email change view"""
 
     detail = serializers.CharField()
+
+
+class ProfileSerializer(serializers.Serializer):
+    """User's profile serializer"""
+
+    class Meta:
+        model = Profile
+        fields = ("id", "user", "profile_photo")
+        read_only_fields = ("id", "user")

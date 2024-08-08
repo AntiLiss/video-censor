@@ -1,10 +1,13 @@
+import os
+
+from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager,
+                                        PermissionsMixin)
 from django.db import models
-from django.db import models
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    BaseUserManager,
-    PermissionsMixin,
-)
+
+
+def get_profile_image_path(instance, filename):
+    """Generate profile image path"""
+    return os.path.join("uploads", "user", filename)
 
 
 class UserManager(BaseUserManager):
@@ -40,3 +43,19 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class Profile(models.Model):
+    """Users' profile model"""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        primary_key=True,
+    )
+    profile_photo = models.ImageField(
+        upload_to=get_profile_image_path, blank=True, null=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

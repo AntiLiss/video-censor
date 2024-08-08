@@ -1,3 +1,38 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
+from rest_framework.generics import CreateAPIView, RetrieveAPIView
+from rest_framework.mixins import (CreateModelMixin, DestroyModelMixin,
+                                   ListModelMixin, RetrieveModelMixin)
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
-# Create your views here.
+from .models import VideoJob
+from .serializers import VideoJobCreateSerializer, VideoJobReadSerializer
+
+
+class VideojobViewSet(
+    CreateModelMixin,
+    ListModelMixin,
+    RetrieveModelMixin,
+    DestroyModelMixin,
+    GenericViewSet,
+):
+    "Create, Read, Destroy videojobs"
+
+    permission_classes = [IsAuthenticated]
+    queryset = VideoJob.objects.all()
+    serializer_class = VideoJobReadSerializer
+
+    def get_serializer_class(self):
+        # Switch sterilizer depending on action
+        if self.action == "create":
+            return VideoJobCreateSerializer
+        return self.serializer_class
+
+    def get_queryset(self):
+        # Limit videojobs to this user
+        return self.queryset.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Set this user to user field
+        return serializer.save(user=self.request.user)

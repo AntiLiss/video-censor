@@ -1,13 +1,8 @@
-from django.urls import path, include, re_path
-from dj_rest_auth.views import PasswordResetConfirmView
 from allauth.socialaccount.views import signup
-from users.views import (
-    ConfirmEmailRedirectView,
-    EmailChangeView,
-    GoogleLogin,
-    GoogleCallbackView,
-)
-
+from dj_rest_auth.views import PasswordResetConfirmView
+from django.urls import include, path, re_path
+from users.views import (ConfirmEmailRedirectView, EmailUpdateView,
+                         GoogleCallbackView, GoogleLogin)
 
 urlpatterns = [
     re_path(
@@ -15,7 +10,7 @@ urlpatterns = [
         PasswordResetConfirmView.as_view(),
         name="password_reset_confirm",
     ),
-    path("email/change/", EmailChangeView.as_view()),
+    path("email/change/", EmailUpdateView.as_view()),
     path("google/callback/", GoogleCallbackView.as_view()),
     path("google/", GoogleLogin.as_view(), name="google_login"),
     path("", include("dj_rest_auth.urls")),
