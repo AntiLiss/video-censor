@@ -1,9 +1,10 @@
-from django.shortcuts import get_object_or_404
-from rest_framework.generics import CreateAPIView, RetrieveAPIView
-from rest_framework.mixins import (CreateModelMixin, DestroyModelMixin,
-                                   ListModelMixin, RetrieveModelMixin)
+from rest_framework.mixins import (
+    CreateModelMixin,
+    DestroyModelMixin,
+    ListModelMixin,
+    RetrieveModelMixin,
+)
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from .models import VideoJob

@@ -1,21 +1,26 @@
 import os
-from uuid import uuid4
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
+def validate_input_file_extension(value):
+    """Check does the input file have valid extension"""
+    ext = os.path.splitext(value.name)[1]
+    valid_extensions = {".mp4", ".mkv", ".avi", ".mov"}
+    if ext.lower() not in valid_extensions:
+        raise ValidationError("Invalid file extension")
+
+
 def get_input_videofile_path(instance, filename):
-    """Generate path with unique filename for input video"""
-    # extension = os.path.splitext(filename)[1]
-    # filename = f"{uuid4()}{extension}"
+    """Generate path for input video"""
     return os.path.join("uploads", "videos", filename)
 
 
 def get_output_videofile_path(instance, filename):
-    """Generate path with unique filename for output video"""
-    extension = os.path.splitext(filename)[1]
-    filename = filename + "_censored" + extension
+    """Generate path for output video"""
+    filename = instance.get_title()
     return os.path.join("processed_videos", filename)
 
 
@@ -44,13 +49,15 @@ class VideoJob(models.Model):
         to=get_user_model(),
         on_delete=models.CASCADE,
     )
-    input_videofile = models.FileField(upload_to=get_input_videofile_path)
+    input_videofile = models.FileField(
+        upload_to=get_input_videofile_path,
+        validators=[validate_input_file_extension],
+    )
     output_videofile = models.FileField(
         upload_to=get_output_videofile_path,
         blank=True,
         null=True,
     )
-    # TODO: Set to `filename` + "_censored" OR NOT??
     title = models.CharField(max_length=255, blank=True)
     size = models.FloatField(blank=True, null=True)
     language = models.CharField(max_length=2, choices=LANG_CHOICES)
@@ -73,6 +80,17 @@ class VideoJob(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def get_title(self):
+        """Get videojob title"""
+        input_filename = os.path.basename(self.input_videofile.name)
+        name = os.path.splitext(input_filename)[0]
+        ext = os.path.splitext(input_filename)[1]
+        return name + "_censored" + ext
+
+    def save(self, *args, **kwargs):
+        self.title = self.get_title()
+        return super().save(*args, **kwargs)
+
 
 class VideoSetting(models.Model):
     bad_habits = models.BooleanField(default=False, blank=True)
@@ -93,7 +111,7 @@ class AudioSetting(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def get_own_word_set(self):
-        """Get set of of own words"""
+        """Get set of own words"""
         return set(self.own_words.lower().split(","))
 
 
