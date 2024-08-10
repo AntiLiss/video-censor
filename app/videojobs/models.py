@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
-def validate_input_file_extension(value):
+def validate_input_videofile_extension(value):
     """Check does the input file have valid extension"""
     ext = os.path.splitext(value.name)[1]
     valid_extensions = {".mp4", ".mkv", ".avi", ".mov"}
@@ -13,15 +13,23 @@ def validate_input_file_extension(value):
         raise ValidationError("Invalid file extension")
 
 
+def validate_input_videofile_size(value):
+    """Validate file size"""
+    size_mb = value.size // (2**20)
+    # Error if file size exceeds 1GB
+    if size_mb > 1024:
+        raise ValidationError("File size is bigger than 1GB!")
+
+
 def get_input_videofile_path(instance, filename):
     """Generate path for input video"""
     return os.path.join("uploads", "videos", filename)
 
 
-def get_output_videofile_path(instance, filename):
-    """Generate path for output video"""
-    filename = instance.get_title()
-    return os.path.join("processed_videos", filename)
+# def get_output_videofile_path(instance, filename):
+#     """Generate path for output video"""
+#     filename = instance.get_title()
+#     return os.path.join("processed_videos", filename)
 
 
 class VideoJob(models.Model):
@@ -51,10 +59,13 @@ class VideoJob(models.Model):
     )
     input_videofile = models.FileField(
         upload_to=get_input_videofile_path,
-        validators=[validate_input_file_extension],
+        validators=[
+            validate_input_videofile_extension,
+            validate_input_videofile_size,
+        ],
     )
     output_videofile = models.FileField(
-        upload_to=get_output_videofile_path,
+        # upload_to=get_output_videofile_path,
         blank=True,
         null=True,
     )
@@ -113,12 +124,3 @@ class AudioSetting(models.Model):
     def get_own_word_set(self):
         """Get set of own words"""
         return set(self.own_words.lower().split(","))
-
-
-# {
-#     "input_file": "my_video.mp4",
-#     "title": "my_video",
-#     "language": "EN",
-#     "video_setting": {"blood": true},
-#     "audio_setting": {"profanity": true, "own_words": ["idiot", "stupid"]},
-# }

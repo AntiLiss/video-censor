@@ -35,8 +35,7 @@ class VideoJobReadSerializer(ModelSerializer):
 
 class VideoJobCreateSerializer(ModelSerializer):
     """
-    Serializer to create a videojob along with setting up
-    associated settings
+    Serializer to create a videojob along with setting up associated settings
     """
 
     video_setting = VideoSettingSerializer(required=False)
@@ -56,6 +55,12 @@ class VideoJobCreateSerializer(ModelSerializer):
     def create(self, validated_data):
         video_setting_data = validated_data.pop("video_setting", None)
         audio_setting_data = validated_data.pop("audio_setting", None)
+
+        # If `own_words` not provided set it an empty string because all fields
+        # must have value to be used in get_or_create comparison
+        if audio_setting_data and not audio_setting_data.get("own_words"):
+            audio_setting_data.setdefault("own_words", "")
+
         videojob = VideoJob.objects.create(**validated_data)
 
         # Get existing settings or create new

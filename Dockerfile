@@ -3,7 +3,9 @@ FROM python:3.12-alpine3.18
 ENV PYTHONUNBUFFERED=1
 
 COPY ./app /app
-COPY ./requirements.txt /tmp
+COPY ./requirements.txt /tmp/
+
+COPY ./entrypoint.sh /
 
 WORKDIR /app
 
@@ -11,7 +13,7 @@ EXPOSE 8000
 
 RUN python -m venv /py && \
     /py/bin/pip install --upgrade pip && \
-    apk add --update --no-cache postgresql-client && \
+    apk add --update --no-cache postgresql-client ffmpeg && \
     apk add --update --no-cache --virtual tmp-build-deps \
     build-base postgresql-dev musl-dev zlib zlib-dev && \
     /py/bin/pip install -r /tmp/requirements.txt && \
@@ -23,6 +25,10 @@ RUN python -m venv /py && \
     chown -R main-user:main-user /vol && \
     chmod -R 755 /vol
 
+RUN chmod +x /entrypoint.sh
+
 ENV PATH="/py/bin:$PATH"
 
 USER main-user
+
+ENTRYPOINT ["/entrypoint.sh"]

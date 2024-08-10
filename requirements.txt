@@ -8,3 +8,5 @@ psycopg2>=2.9.9,<3
 yookassa>=3.3.0,<3.4
 pillow>=10.4.0,<10.5
 isort~=5.13.2
+celery~=5.4.0
+redis~=5.0.8
