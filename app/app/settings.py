@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     # Local
     "users",
-    "videojobs",
+    "videojobs.apps.VideojobsConfig",
 ]
 
 MIDDLEWARE = [
@@ -221,8 +221,8 @@ SOCIALACCOUNT_PROVIDERS = {
 
 
 # Celery settings
-# CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-# CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
 # CELERY_ACCEPT_CONTENT = ["json"]
 # CELERY_TASK_SERIALIZER = "json"
 # CELERY_RESULT_SERIALIZER = "json"

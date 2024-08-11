@@ -1,11 +1,17 @@
 import os
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
 
 
-def validate_input_videofile_extension(value):
+def get_input_video_path(instance, filename):
+    """Generate path for input video"""
+    return os.path.join("uploads", "videos", filename)
+
+
+def validate_input_video_extension(value):
     """Check does the input file have valid extension"""
     ext = os.path.splitext(value.name)[1]
     valid_extensions = {".mp4", ".mkv", ".avi", ".mov"}
@@ -13,34 +19,24 @@ def validate_input_videofile_extension(value):
         raise ValidationError("Invalid file extension")
 
 
-def validate_input_videofile_size(value):
-    """Validate file size"""
-    size_mb = value.size // (2**20)
+def validate_input_video_size(value):
+    """Check does the input file size exceed the limit"""
+    max_size_mb = 1024
+    size = round(value.size // (2**20), 2)
     # Error if file size exceeds 1GB
-    if size_mb > 1024:
-        raise ValidationError("File size is bigger than 1GB!")
-
-
-def get_input_videofile_path(instance, filename):
-    """Generate path for input video"""
-    return os.path.join("uploads", "videos", filename)
-
-
-# def get_output_videofile_path(instance, filename):
-#     """Generate path for output video"""
-#     filename = instance.get_title()
-#     return os.path.join("processed_videos", filename)
+    if size > max_size_mb:
+        raise ValidationError(f"File size exceeds {max_size_mb}MB!")
 
 
 class VideoJob(models.Model):
     # Status choices
     PROCESSING = "P"
-    SUCCEEDED = "S"
+    COMPLETED = "S"
     FAILED = "F"
 
     STATUS_CHOICES = (
         (PROCESSING, "Processing"),
-        (SUCCEEDED, "Succeeded"),
+        (COMPLETED, "Completed"),
         (FAILED, "Failed"),
     )
 
@@ -57,18 +53,14 @@ class VideoJob(models.Model):
         to=get_user_model(),
         on_delete=models.CASCADE,
     )
-    input_videofile = models.FileField(
-        upload_to=get_input_videofile_path,
+    input_video = models.FileField(
+        upload_to=get_input_video_path,
         validators=[
-            validate_input_videofile_extension,
-            validate_input_videofile_size,
+            validate_input_video_extension,
+            validate_input_video_size,
         ],
     )
-    output_videofile = models.FileField(
-        # upload_to=get_output_videofile_path,
-        blank=True,
-        null=True,
-    )
+    output_video = models.FileField(blank=True, null=True)
     title = models.CharField(max_length=255, blank=True)
     size = models.FloatField(blank=True, null=True)
     language = models.CharField(max_length=2, choices=LANG_CHOICES)
@@ -79,24 +71,30 @@ class VideoJob(models.Model):
         blank=True,
     )
     video_setting = models.ForeignKey(
-        "VideoSetting",
-        null=True,
-        on_delete=models.PROTECT,
+        "VideoSetting", null=True, on_delete=models.SET_NULL
     )
     audio_setting = models.ForeignKey(
         "AudioSetting",
         null=True,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def get_title(self):
-        """Get videojob title"""
-        input_filename = os.path.basename(self.input_videofile.name)
+        """Generate videojob's title value"""
+        input_filename = os.path.basename(self.input_video.name)
         name = os.path.splitext(input_filename)[0]
         ext = os.path.splitext(input_filename)[1]
         return name + "_censored" + ext
+
+    def get_output_video_path(self):
+        """Generate absolute path for output file"""
+        return os.path.join(
+            settings.MEDIA_ROOT,
+            "processed_videos",
+            self.get_title(),
+        )
 
     def save(self, *args, **kwargs):
         self.title = self.get_title()

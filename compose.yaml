@@ -13,6 +13,7 @@ services:
         python manage.py runserver 0.0.0.0:8000"
     depends_on:
       - db
+      - redis
 
   db:
     image: postgres:15.5-alpine3.19
@@ -22,6 +23,22 @@ services:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
+
+  redis:
+    image: redis:7.4-alpine
+
+  celery_worker:
+    build: .
+    command: celery -A app worker -l info
+    volumes:
+      - ./app:/app
+      - static-data:/vol/web
+    env_file:
+      - .env
+    depends_on:
+      - app
+      - db
+      - redis
 
 volumes:
   static-data:

@@ -1,15 +1,11 @@
-from rest_framework.mixins import (
-    CreateModelMixin,
-    DestroyModelMixin,
-    ListModelMixin,
-    RetrieveModelMixin,
-)
+from rest_framework.mixins import (CreateModelMixin, DestroyModelMixin,
+                                   ListModelMixin, RetrieveModelMixin)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
 from .models import VideoJob
 from .serializers import VideoJobCreateSerializer, VideoJobReadSerializer
-# from .tasks import reverse_video
+from .tasks import reverse_video
 
 
 class VideojobViewSet(
@@ -38,4 +34,4 @@ class VideojobViewSet(
     def perform_create(self, serializer):
         # Set this user to user field
         videojob = serializer.save(user=self.request.user)
-        # reverse_video.delay_on_commit(videojob.id)
+        reverse_video.delay(videojob.id)

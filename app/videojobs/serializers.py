@@ -27,7 +27,7 @@ class VideoJobReadSerializer(ModelSerializer):
         fields = (
             "id",
             "status",
-            "output_videofile",
+            "output_video",
             "title",
             "size",
         )
@@ -45,7 +45,7 @@ class VideoJobCreateSerializer(ModelSerializer):
         model = VideoJob
         fields = (
             "id",
-            "input_videofile",
+            "input_video",
             "language",
             "video_setting",
             "audio_setting",
