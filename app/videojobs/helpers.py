@@ -1,5 +1,6 @@
-from faster_whisper import WhisperModel
 import string
+
+from faster_whisper import WhisperModel
 
 
 def transcribe_with_timestamps(
@@ -20,16 +21,18 @@ def transcribe_with_timestamps(
     for segment in segments:
         word_objects += segment.words
 
-    word_timings = {}
-    for w in word_objects:
-        key = w.word.translate(str.maketrans("", "", string.punctuation))
-        key = key.lower().strip()
-        if key in word_timings:
-            word_timings[key].append((w.start, w.end))
-            continue
-        word_timings[key] = [(w.start, w.end)]
+    # word_timings = {}
+    # for w in word_objects:
+    #     key = w.word.translate(str.maketrans("", "", string.punctuation))
+    #     key = key.lower().strip()
+    #     if key in word_timings:
+    #         word_timings[key].append((w.start, w.end))
+    #         continue
+    #     word_timings[key] = [(w.start, w.end)]
 
-    return word_timings
+    # return word_timings
+    print(word_objects)
+    return word_objects
 
 
 def beep_audio():

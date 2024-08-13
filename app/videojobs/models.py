@@ -1,4 +1,5 @@
 import os
+import re
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -41,8 +42,8 @@ class VideoJob(models.Model):
     )
 
     # Language choices
-    ENGLISH = "EN"
-    RUSSIAN = "RU"
+    ENGLISH = "ru"
+    RUSSIAN = "en"
 
     LANG_CHOICES = (
         (ENGLISH, "English"),
@@ -121,4 +122,5 @@ class AudioSetting(models.Model):
 
     def get_own_word_set(self):
         """Get set of own words"""
-        return set(self.own_words.lower().split(","))
+        word_list = re.findall(r"\b\w+\b", self.own_words.lower())
+        return set(word_list)
