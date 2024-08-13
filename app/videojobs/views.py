@@ -5,7 +5,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from .models import VideoJob
 from .serializers import VideoJobCreateSerializer, VideoJobReadSerializer
-from .tasks import reverse_video
+from .tasks import censor_video
 
 
 class VideojobViewSet(
@@ -35,4 +35,4 @@ class VideojobViewSet(
         # Set this user to user field
         videojob = serializer.save(user=self.request.user)
         # Put video processing in Celery queue
-        reverse_video.delay(videojob.id)
+        censor_video.delay(videojob.id)

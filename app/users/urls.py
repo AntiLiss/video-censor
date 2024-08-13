@@ -1,7 +1,6 @@
 from allauth.socialaccount.views import signup
 from dj_rest_auth.views import PasswordResetConfirmView
 from django.urls import include, path, re_path
-
 from users.views import (ConfirmEmailRedirectView, EmailUpdateView,
                          GoogleCallbackView, GoogleLogin)
 

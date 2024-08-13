@@ -11,4 +11,4 @@ isort~=5.13.2
 celery~=5.4.0
 redis~=5.0.8
 ffmpeg-python~=0.2.0
-whisperx~=3.1.5
+faster-whisper~=1.0.3
