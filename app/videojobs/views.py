@@ -34,4 +34,5 @@ class VideojobViewSet(
     def perform_create(self, serializer):
         # Set this user to user field
         videojob = serializer.save(user=self.request.user)
+        # Put video processing in Celery queue
         reverse_video.delay(videojob.id)

@@ -78,6 +78,7 @@ class VideoJob(models.Model):
         null=True,
         on_delete=models.SET_NULL,
     )
+    text = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
