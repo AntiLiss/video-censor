@@ -23,16 +23,16 @@ def validate_input_video_extension(value):
 def validate_input_video_size(value):
     """Check does the input file size exceed the limit"""
     max_size_mb = 1024
-    size = round(value.size // (2**20), 2)
-    # Error if file size exceeds 1GB
-    if size > max_size_mb:
+    size_mb = round(value.size // (2**20), 2)
+    # Error if file size exceeds max size
+    if size_mb > max_size_mb:
         raise ValidationError(f"File size exceeds {max_size_mb}MB!")
 
 
 class VideoJob(models.Model):
     # Status choices
     PROCESSING = "P"
-    COMPLETED = "S"
+    COMPLETED = "C"
     FAILED = "F"
 
     STATUS_CHOICES = (
@@ -122,5 +122,6 @@ class AudioSetting(models.Model):
 
     def get_own_word_set(self):
         """Get set of own words"""
-        word_list = re.findall(r"\b\w+\b", self.own_words.lower())
+        word_str = self.own_words.lower().strip()
+        word_list = [w for w in word_str.split(",") if w]
         return set(word_list)

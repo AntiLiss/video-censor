@@ -105,4 +105,4 @@ class ProfileCRUDView(
 
     def perform_create(self, serializer):
         # Set user field to this user by default
-        return serializer.save(user=self.request.user)
+        serializer.save(user=self.request.user)
