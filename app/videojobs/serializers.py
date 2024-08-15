@@ -25,14 +25,14 @@ class AudioSettingSerializer(ModelSerializer):
         # The string consists at least of 1 word.
         # Words are separated by comma.
         # Word consists of letters and/or digits.
-        # Also allowed words united by `-` or ` ` like `co-op` and `back end`
-        pattern = r"\b\w+([- ]?\w+)?\b(,\b\w+([- ]?\w+)?\b)*,?"
+        # Words united by `-` or ` ` like `co-op` and `back end` are allowed
+        pattern = r"\b\w+([- ]\w+)*\b(,\b\w+([- ]\w+)*\b)*,?"
 
         own_words = own_words.strip()
 
-        if not own_words:
-            pass
-        elif not re.fullmatch(pattern, own_words) or re.search(r"_", own_words):
+        if own_words and (
+            not re.fullmatch(pattern, own_words) or re.search(r"_", own_words)
+        ):
             msg = "Ensure this is a comma separated list of words!"
             raise ValidationError(msg)
 
@@ -84,12 +84,12 @@ class VideoJobCreateSerializer(ModelSerializer):
 
         # Get existing settings or create new
         if video_setting_data:
-            video_setting, created = VideoSetting.objects.get_or_create(
+            video_setting, _ = VideoSetting.objects.get_or_create(
                 **video_setting_data,
             )
             videojob.video_setting = video_setting
         if audio_setting_data:
-            audio_setting, created = AudioSetting.objects.get_or_create(
+            audio_setting, _ = AudioSetting.objects.get_or_create(
                 **audio_setting_data,
             )
             videojob.audio_setting = audio_setting

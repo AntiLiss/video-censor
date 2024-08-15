@@ -22,6 +22,8 @@ RUN python -m venv /py && \
         ffmpeg \
         zlib1g-dev && \
     /py/bin/pip install -r /tmp/requirements.txt && \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false && \
+    rm -rf /var/lib/apt/lists/* && \
     rm -rf /tmp && \
     adduser --disabled-password main-user && \
     mkdir -p /vol/web/static && \
