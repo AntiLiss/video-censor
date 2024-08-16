@@ -71,6 +71,7 @@ class VideoJob(models.Model):
         default=PROCESSING,
         blank=True,
     )
+    error_message = models.JSONField(null=True, blank=True)
     video_setting = models.ForeignKey(
         "VideoSetting", null=True, on_delete=models.SET_NULL
     )
@@ -112,7 +113,7 @@ class VideoSetting(models.Model):
 
 class AudioSetting(models.Model):
     profanity = models.BooleanField(default=False, blank=True)
-    xenophobia = models.BooleanField(default=False, blank=True)
+    insult = models.BooleanField(default=False, blank=True)
     own_words = models.TextField(
         blank=True,
         help_text="Comma separated string of words",
@@ -125,3 +126,7 @@ class AudioSetting(models.Model):
         word_str = self.own_words.lower().strip()
         word_list = [w for w in word_str.split(",") if w]
         return set(word_list)
+
+    def is_configured(self):
+        """Check if any field is set"""
+        return any((self.profanity, self.insult, self.own_words))

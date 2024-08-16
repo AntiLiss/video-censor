@@ -227,3 +227,6 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
 # CELERY_TASK_SERIALIZER = "json"
 # CELERY_RESULT_SERIALIZER = "json"
 # CELERY_TIMEZONE = "UTC"
+
+# Directory storing txt files with ban words
+BAN_WORDS_DIR = os.path.join(BASE_DIR, "videojobs", "ban_words")
