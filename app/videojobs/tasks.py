@@ -12,7 +12,7 @@ from .utils import WhisperModelSingleton, has_audio
 
 def whisper_transcribe(whisper_model, file_path, lang):
     """
-    Trancribe audio using whisper model and return list of word info
+    Trancribe video using whisper model and return a list of word info
     dictionaries with timestamps
     """
     segments, _ = whisper_model.transcribe(
@@ -28,7 +28,7 @@ def whisper_transcribe(whisper_model, file_path, lang):
                 "start": w.start,
                 "end": w.end,
             }
-            # Unite word parts separated by the `-` into 1 word, cuz whisper
+            # Merge word parts separated by the `-` into 1 word, cuz whisper
             # thinks that word like `check-in` is 2 words: `check` and `-in`
             if word_info["value"].startswith("-"):
                 words[-1]["value"] += word_info["value"]
@@ -42,29 +42,11 @@ def whisper_transcribe(whisper_model, file_path, lang):
 def pull_words_from_file(filename):
     """Read file and return set of words"""
     with open(filename, "r", encoding="utf8") as f:
-        words = {line.strip().lower() for line in f if line.strip()}
-    return words
+        return {line.strip().lower() for line in f if line.strip()}
 
 
-@shared_task
-def censor_video(video_id):
-    """Mute ban words in video"""
-    videojob = VideoJob.objects.select_related(
-        "audio_setting",
-        "video_setting",
-    ).get(id=video_id)
-
-    audio_setting = videojob.audio_setting
-
-    if not audio_setting or not audio_setting.is_configured():
-        return "NO AUDIO SETTING"
-
-    input_path = videojob.input_video.path
-    output_path = videojob.get_output_video_path()
-    # Create directory for processed videos if not present
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-    # Collect all ban words into a set
+def collect_ban_words(audio_setting, videojob):
+    """Collect ban words from own_words and corresponding file"""
     ban_words = audio_setting.get_own_word_set()
 
     if audio_setting.profanity:
@@ -81,20 +63,14 @@ def censor_video(video_id):
         )
         ban_words.update(pull_words_from_file(insult_file))
 
-    # Abort processing if no ban words are provided
-    if not ban_words:
-        return "No ban word found"
+    return ban_words
 
-    # Ensure video has audio
-    if not has_audio(input_path):
-        videojob.status = videojob.FAILED
-        videojob.error_message = "Video has no audio!"
-        videojob.save()
-        return videojob.error_message
 
+def mute_words(input, output, ban_words, lang):
+    """Mute provided words in video and save the video in output_path"""
     # Transcribe a file
     model = WhisperModelSingleton("medium", device="cpu", compute_type="int8")
-    words = whisper_transcribe(model, input_path, videojob.language)
+    words = whisper_transcribe(model, input, lang)
 
     # Collect audio filter commands
     audio_filters = [
@@ -102,30 +78,76 @@ def censor_video(video_id):
         for w in words
         if w["value"] in ban_words
     ]
-    # for w in words:
-    #     if w["value"] in ban_words:
-    #         # Expand the time frame to ensure coverage
-    #         end = w["end"] + 0.1
-    #         audio_filters.append(
-    #             f"volume=enable='between(t,{w['start']},{end})':volume=0"
-    #         )
+    filter_chain = ",".join(audio_filters)
 
-    if audio_filters:
-        complex_filter = ",".join(audio_filters)
-        ffmpeg.input(input_path).output(
-            output_path,
-            af=complex_filter,
+    if filter_chain:
+        ffmpeg.input(input).output(
+            output,
+            af=filter_chain,
             vcodec="copy",
             acodec="aac",
-            strict="experimental",
         ).run()
     else:
-        ffmpeg.input(input_path).output(output_path).run()
+        ffmpeg.input(input).output(
+            output,
+            vcodec="copy",
+            acodec="copy",
+        ).run()
 
-    relative_output_path = os.path.relpath(output_path, settings.MEDIA_ROOT)
-    videojob.output_video = relative_output_path
-    videojob.size = round(os.path.getsize(output_path) / (2**20), 2)
-    videojob.status = videojob.COMPLETED
+
+def complete_videjob(videojob, error_msg=None):
+    """Complete VideoJob instance fields"""
+    output_path = videojob.get_output_video_path()
+
+    if not error_msg:
+        videojob.status = videojob.COMPLETED
+        videojob.output_video = os.path.relpath(
+            output_path,
+            settings.MEDIA_ROOT,
+        )
+        videojob.size = round(os.path.getsize(output_path) / (2**20), 2)
+    else:
+        videojob.status = videojob.FAILED
+        videojob.error_message = error_msg
+
     videojob.save()
 
-    return "CELERY TASK DONE!!!"
+
+@shared_task
+def censor_video(video_id):
+    """Mute ban words in video"""
+    videojob = VideoJob.objects.select_related(
+        "audio_setting",
+        "video_setting",
+    ).get(id=video_id)
+
+    input_path = videojob.input_video.path
+    output_path = videojob.get_output_video_path()
+    # Create directory for processed videos if not present
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    audio_setting = videojob.audio_setting
+
+    if not audio_setting or not audio_setting.is_applied():
+        ffmpeg.input(input_path).output(
+            output_path,
+            vcodec="copy",
+            acodec="copy",
+        ).run()
+        return complete_videjob(videojob)
+
+    try:
+        ban_words = collect_ban_words(audio_setting, videojob)
+        if not ban_words:
+            return complete_videjob(videojob, "Can't collect ban words")
+
+        if not has_audio(input_path):
+            return complete_videjob(
+                videojob, "The video has no audio to apply sound censorship"
+            )
+
+        mute_words(input_path, output_path, ban_words, videojob.language)
+        complete_videjob(videojob)
+    except Exception as e:
+        print(str(e))
+        complete_videjob(videojob, "Unexpected error")

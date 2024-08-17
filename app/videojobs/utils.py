@@ -33,5 +33,4 @@ def has_audio(video_path):
         ],
         capture_output=True,
     )
-
     return True if result.stdout else False

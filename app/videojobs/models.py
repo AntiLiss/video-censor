@@ -1,5 +1,4 @@
 import os
-import re
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -71,7 +70,7 @@ class VideoJob(models.Model):
         default=PROCESSING,
         blank=True,
     )
-    error_message = models.JSONField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
     video_setting = models.ForeignKey(
         "VideoSetting", null=True, on_delete=models.SET_NULL
     )
@@ -127,6 +126,6 @@ class AudioSetting(models.Model):
         word_list = [w for w in word_str.split(",") if w]
         return set(word_list)
 
-    def is_configured(self):
+    def is_applied(self):
         """Check if any field is set"""
         return any((self.profanity, self.insult, self.own_words))
