@@ -1,11 +1,15 @@
 import os
 import re
+import subprocess
 from functools import lru_cache
+from uuid import uuid4
 
 import ffmpeg
 from celery import shared_task
 from django.conf import settings
 from faster_whisper import WhisperModel
+from pydub import AudioSegment
+from pydub.generators import Sine
 
 from .models import VideoJob
 from .utils import Singleton, has_audio
@@ -13,7 +17,7 @@ from .utils import Singleton, has_audio
 
 class Transcriber(
     WhisperModel,
-    metaclass=Singleton,  # Singleton cuz WhisperModel init takes a time
+    metaclass=Singleton,  # Singleton cuz WhisperModel init takes long time
 ):
     """Transcribe video/audio using whisper model"""
 
@@ -36,16 +40,15 @@ class Transcriber(
                 # NOTE: First word can't start with hyphen unless whisper
                 # makes a mistake
                 if w.word.startswith("-"):
-                    words[-1]["value"] += w.word
+                    words[-1]["value"] += self.__normalize_word(w.word)
                     continue
-
-                word_info = {
-                    "value": self.__normalize_word(w.word),
-                    "start": w.start,
-                    "end": w.end,
-                }
-                words.append(word_info)
-
+                words.append(
+                    {
+                        "value": self.__normalize_word(w.word),
+                        "start": w.start,
+                        "end": w.end,
+                    }
+                )
         return words
 
     def __normalize_word(self, word):
@@ -53,35 +56,42 @@ class Transcriber(
         return re.sub(r"[^\w -]", "", word.lower().strip())
 
 
-class VideoSpeechCensor:
-    """Remove unwanted words from a video"""
+class VideoSoundCensor:
+    """Censor unwanted words in video"""
 
-    def censor(self, input, output, ban_words, lang):
-        # Transcribe input video
+    def censor(self, input, ban_words, lang):
+        """Censor video and return modified audio path"""
+        # Transcribe input file
         model = Transcriber("medium", device="cpu", compute_type="int8")
         words = model.transcribe_with_timestamps(input, lang)
 
-        # Collect audio filter commands
-        audio_filters = [
-            f"volume=enable='between(t,{w['start']},{w['end'] + 0.1})':volume=0"
-            for w in words
-            if w["value"] in ban_words
-        ]
-        filter_chain = ",".join(audio_filters)
+        # Extract audio
+        audio = AudioSegment.from_file(input)
 
-        if filter_chain:
-            ffmpeg.input(input).output(
-                output,
-                af=filter_chain,
-                vcodec="copy",
-                acodec="aac",
-            ).run()
-        else:
-            ffmpeg.input(input).output(
-                output,
-                vcodec="copy",
-                acodec="copy",
-            ).run()
+        # Apply censor sound to detected ban words
+        for w in words:
+            if w["value"] in ban_words:
+                start_ms, end_ms = w["start"] * 1000, w["end"] * 1000
+                duration_ms = end_ms - start_ms
+                beep_sound = self.__create_beep_sound(duration_ms)
+                audio = audio[:start_ms] + beep_sound + audio[end_ms:]
+
+        censored_audio_path = os.path.join(
+            settings.TEMP_FILES_DIR,
+            f"{uuid4()}.wav",
+        )
+        audio.export(censored_audio_path, format="wav")
+        return censored_audio_path
+
+    def __create_beep_sound(self, duration_ms):
+        """Create beep sound object"""
+        beep = Sine(1000).to_audio_segment(duration=duration_ms)
+        return beep - 15  # Reduce volume
+
+
+class VideoPictureCensor:
+    def censor(self):
+        return
 
 
 def collect_ban_words(audio_setting, videojob):
@@ -163,12 +173,35 @@ def censor_video(video_id):
         if not ban_words:
             return complete_videjob(videojob, "Can't collect ban words")
 
-        VideoSpeechCensor().censor(
+        censured_audio = VideoSoundCensor().censor(
             input_path,
-            output_path,
             ban_words,
             videojob.language,
         )
+        censured_picture = VideoPictureCensor().censor()
+
+        # Merge censored parts
+        # fmt: off
+        command = [
+            "ffmpeg",
+            "-i", censured_picture or input_path,
+            "-i", censured_audio or input_path,
+            "-c:v", 'libx264' if censured_picture else "copy",
+            "-c:a", "aac" if censured_audio else 'copy',
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            output_path,
+            "-y",
+        ]
+        # fmt: on
+        subprocess.run(command)
+
+        # Clean up indermediate files
+        if os.path.isfile(censured_audio or ""):
+            os.remove(censured_audio)
+        if os.path.isfile(censured_picture or ""):
+            os.remove(censured_picture)
+
         return complete_videjob(videojob)
     except Exception as e:
         print(str(e))
