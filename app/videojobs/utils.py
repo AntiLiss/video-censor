@@ -1,7 +1,5 @@
 import subprocess
 
-from faster_whisper import WhisperModel
-
 
 class Singleton(type):
     _inctances = {}
@@ -10,12 +8,6 @@ class Singleton(type):
         if cls not in Singleton._inctances:
             Singleton._inctances[cls] = super().__call__(*args, **kwargs)
         return Singleton._inctances[cls]
-
-
-class WhisperModelSingleton(WhisperModel, metaclass=Singleton):
-    """Singleton class ensuring only one instance of WhisperModel exists"""
-
-    pass
 
 
 def has_audio(video_path):

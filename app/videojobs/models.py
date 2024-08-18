@@ -72,11 +72,15 @@ class VideoJob(models.Model):
     )
     error_message = models.TextField(blank=True)
     video_setting = models.ForeignKey(
-        "VideoSetting", null=True, on_delete=models.SET_NULL
+        "VideoSetting",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
     )
     audio_setting = models.ForeignKey(
         "AudioSetting",
         null=True,
+        blank=True,
         on_delete=models.SET_NULL,
     )
 
