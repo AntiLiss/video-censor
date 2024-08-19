@@ -1,15 +1,16 @@
 import os
 import re
 import subprocess
+import sys
 from functools import lru_cache
 from uuid import uuid4
-import shutil
+
 from celery import shared_task
 from django.conf import settings
 from faster_whisper import WhisperModel
 from pydub import AudioSegment
 from pydub.generators import Sine
-from django.core.files import File
+
 from .models import VideoJob
 from .utils import Singleton, UserOutputError, has_audio
 
@@ -144,7 +145,7 @@ class CensorshipProcessor:
         if self.__has_video_setting():
             censured_picture = VideoPictureCensor().censor()
 
-        # Save the rusult to output path
+        # Save the result to output path
         self.__save_censored_video(
             censured_picture,
             censured_audio,
@@ -152,15 +153,10 @@ class CensorshipProcessor:
         )
 
         # Clean up indermediate files
-        # if os.path.isfile(censured_audio or ""):
-        #     os.remove(censured_audio)
-        # if os.path.isfile(censured_picture or ""):
-        #     os.remove(censured_picture)
-        # os.remove
-
-        # TODO: Docker raises PermissionDenied error. Fix
-        shutil.rmtree(settings.TEMP_FILES_DIR)
-        os.makedirs(settings.TEMP_FILES_DIR, exist_ok=True)
+        if os.path.isfile(censured_audio or ""):
+            os.remove(censured_audio)
+        if os.path.isfile(censured_picture or ""):
+            os.remove(censured_picture)
 
         return None
 
@@ -236,17 +232,10 @@ def complete_videojob(videojob, error_msg=None):
     else:
         videojob.status = videojob.COMPLETED
         output_video_path = videojob.get_output_video_path()
-        # videojob.output_video.path = os.path.relpath(
-        #     output_video_path,
-        #     settings.MEDIA_ROOT,
-        # )
-        # Open the file
-        with open(output_video_path, "rb") as f:
-            django_file = File(f)
-            # Assign the file to the FileField
-            videojob.output_video.save(
-                os.path.basename(output_video_path), django_file, save=True
-            )
+        videojob.output_video = os.path.relpath(
+            output_video_path,
+            settings.MEDIA_ROOT,
+        )
         videojob.size = round(os.path.getsize(output_video_path) / (2**20), 2)
 
     videojob.save()
@@ -260,9 +249,10 @@ def censor_video(video_id):
         "video_setting",
     ).get(id=video_id)
 
+    output_path = videojob.get_output_video_path()
     # Ensure dir for processed videos
     os.makedirs(
-        os.path.dirname(videojob.get_output_video_path()),
+        os.path.dirname(output_path),
         exist_ok=True,
     )
 
@@ -272,12 +262,12 @@ def censor_video(video_id):
         processor.run()
     except UserOutputError as e:
         error_msg = str(e)
-        print(error_msg)
+        print(f"\033[91m{error_msg}: {str(e)}\033[0m", file=sys.stderr)
     except Exception as e:
         error_msg = "Unexpected error"
-        print(str(e))
+        print(f"\033[91m{error_msg}: {str(e)}\033[0m", file=sys.stderr)
     finally:
         # Remove created result file if error occurs
-        if error_msg and os.path.isfile(videojob.get_output_video_path()):
-            os.remove(videojob.get_output_video_path())
+        if error_msg and os.path.isfile(output_path):
+            os.remove(output_path)
         complete_videojob(videojob, error_msg)
