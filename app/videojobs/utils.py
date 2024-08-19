@@ -2,6 +2,8 @@ import subprocess
 
 
 class Singleton(type):
+    """Meta class to apply singleton pattern to class"""
+
     _inctances = {}
 
     def __call__(cls, *args, **kwargs):
@@ -26,3 +28,9 @@ def has_audio(video_path):
         capture_output=True,
     )
     return True if result.stdout else False
+
+
+class UserOutputError(Exception):
+    """Error to display to user"""
+
+    pass

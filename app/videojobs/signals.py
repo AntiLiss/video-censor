@@ -7,6 +7,7 @@ from .models import VideoJob
 @receiver(post_delete, sender=VideoJob)
 def delete_video_files(sender, instance, **kwargs):
     """Delete video files corresponding to videojob"""
-    instance.input_video.delete(save=False)
+    if instance.input_video:
+        instance.input_video.delete(save=False)
     if instance.output_video:
         instance.output_video.delete(save=False)

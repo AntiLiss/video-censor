@@ -232,4 +232,4 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
 BAN_WORDS_DIR = os.path.join(BASE_DIR, "videojobs", "ban_words")
 
 # Dir to store indermediate media files
-TEMP_FILES_DIR = os.path.join("/", "tmp")
+TEMP_FILES_DIR = os.path.join("/", "tmp-files")

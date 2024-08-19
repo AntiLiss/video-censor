@@ -24,16 +24,17 @@ RUN python -m venv /py && \
     /py/bin/pip install -r /tmp/requirements.txt && \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -rf /tmp/* && \
+    rm -rf /tmp && \
     adduser --disabled-password main-user && \
     mkdir -p /vol/web/static && \
     mkdir -p /vol/web/media && \
+    mkdir -p /tmp-files && \
     chown -R main-user:main-user \
-        /tmp \
+        /tmp-files \
         /vol \
         /home  && \
     chmod -R 755 \
-        /tmp \
+        /tmp-files \
         /vol \
         /home  && \
     chmod +x /entrypoint.sh

@@ -113,6 +113,10 @@ class VideoSetting(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def is_applied(self):
+        """Check if any field is set"""
+        return any((self.bad_habits, self.blood, self.nudity))
+
 
 class AudioSetting(models.Model):
     profanity = models.BooleanField(default=False, blank=True)
