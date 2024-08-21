@@ -58,6 +58,9 @@ class Transcriber(
 class VideoSoundCensor:
     """Censor unwanted words in video"""
 
+    def __init__(self, tmp_files_dir):
+        self.tmp_files_dir = tmp_files_dir
+
     def censor(self, input, ban_words, lang):
         """Censor video's audio and return modified audio path"""
         self.__raise_no_sound_error(input)
@@ -79,7 +82,7 @@ class VideoSoundCensor:
 
         # Save censored audio as temporary file
         censored_audio_path = os.path.join(
-            settings.TEMP_FILES_DIR,
+            self.tmp_files_dir,
             f"{uuid4()}.wav",
         )
         audio.export(censored_audio_path, format="wav")
@@ -111,8 +114,9 @@ class VideoPictureCensor:
 class CensorshipProcessor:
     """Censor visual and audio parts of video"""
 
-    def __init__(self, videojob):
+    def __init__(self, videojob, tmp_files_dir):
         self.videojob = videojob
+        self.tmp_files_dir = tmp_files_dir
 
         self.input_video_path = videojob.input_video.path
         self.output_video_path = videojob.get_output_video_path()
@@ -135,7 +139,7 @@ class CensorshipProcessor:
         # Apply audio censorship if requested
         if self.__has_audio_setting():
             ban_words = self.__collect_ban_words()
-            censured_audio = VideoSoundCensor().censor(
+            censured_audio = VideoSoundCensor(self.tmp_files_dir).censor(
                 self.input_video_path,
                 ban_words,
                 self.videojob.language,
@@ -146,16 +150,12 @@ class CensorshipProcessor:
             censured_picture = VideoPictureCensor().censor()
 
         # Save the result to output path
-        self.__save_censored_video(
-            censured_picture,
-            censured_audio,
-            has_audio(self.input_video_path),
-        )
+        self.__save_censored_video(censured_picture, censured_audio)
 
         # Clean up indermediate files
-        if os.path.isfile(censured_audio or ""):
+        if censured_audio and os.path.isfile(censured_audio):
             os.remove(censured_audio)
-        if os.path.isfile(censured_picture or ""):
+        if censured_picture and os.path.isfile(censured_picture):
             os.remove(censured_picture)
 
         return None
@@ -206,7 +206,7 @@ class CensorshipProcessor:
         # fmt: on
         subprocess.run(command)
 
-    def __save_censored_video(self, censured_video, censured_audio, has_audio=True):
+    def __save_censored_video(self, censured_video, censured_audio):
         """Save censored video and audio to one output file"""
         # Merge censored parts if present
         # fmt: off
@@ -217,7 +217,7 @@ class CensorshipProcessor:
             "-c:v", 'libx264' if censured_video else "copy",
             "-c:a", "aac" if censured_audio else 'copy',
             "-map", "0:v:0",
-            *(["-map", "1:a:0"] if has_audio else []),
+            *(["-map", "1:a:0"] if has_audio(self.input_video_path) else []),
             self.output_video_path,
         ]
         # fmt: on
@@ -249,14 +249,21 @@ def censor_video(video_id):
         "video_setting",
     ).get(id=video_id)
 
-    output_path = videojob.get_output_video_path()
     # Ensure dir for processed videos
+    output_path = videojob.get_output_video_path()
     os.makedirs(
         os.path.dirname(output_path),
         exist_ok=True,
     )
 
-    processor = CensorshipProcessor(videojob)
+    # Ensure dir for intermediate files for the user
+    tmp_files_dir = os.path.join(settings.TEMP_FILES_DIR, str(videojob.user.pk))
+    os.makedirs(
+        tmp_files_dir,
+        exist_ok=True,
+    )
+
+    processor = CensorshipProcessor(videojob, tmp_files_dir)
     error_msg = None
     try:
         processor.run()
