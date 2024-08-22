@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     # Local
     "users",
     "videojobs.apps.VideojobsConfig",
+    "subscriptions",
 ]
 
 MIDDLEWARE = [

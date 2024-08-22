@@ -86,6 +86,13 @@ class VideoJob(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        self.title = self.get_title()
+        return super().save(*args, **kwargs)
+
     def get_title(self):
         """Generate videojob's title value"""
         input_filename = os.path.basename(self.input_video.name)
@@ -100,10 +107,6 @@ class VideoJob(models.Model):
             "processed_videos",
             self.get_title(),
         )
-
-    def save(self, *args, **kwargs):
-        self.title = self.get_title()
-        return super().save(*args, **kwargs)
 
 
 class VideoSetting(models.Model):
