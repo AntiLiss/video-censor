@@ -85,6 +85,7 @@ class VideoJob(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
@@ -115,6 +116,7 @@ class VideoSetting(models.Model):
     nudity = models.BooleanField(default=False, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def is_applied(self):
         """Check if any field is set"""
@@ -130,6 +132,7 @@ class AudioSetting(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def get_own_word_set(self):
         """Get set of own words"""

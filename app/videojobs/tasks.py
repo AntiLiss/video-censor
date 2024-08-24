@@ -232,6 +232,8 @@ def complete_videojob(videojob, error_msg=None):
     else:
         videojob.status = videojob.COMPLETED
         output_video_path = videojob.get_output_video_path()
+        # TODO: Save file to the field by creating a temporary file to follow
+        # Django rules and keep consistence
         videojob.output_video = os.path.relpath(
             output_video_path,
             settings.MEDIA_ROOT,

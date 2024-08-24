@@ -194,7 +194,7 @@ REST_AUTH = {
 
 # rest_framework_simplejwt settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=1_000_000),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=100_000_000),
 }
 
 

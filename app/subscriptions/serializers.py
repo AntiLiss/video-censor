@@ -1,18 +1,24 @@
+from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
 from .models import SubPlan, Subscription
 
 
-class SubPlanReadSerializer(ModelSerializer):
+class SubPlanBriefSerializer(ModelSerializer):
+    """Concise serializer for sub plan"""
+
+    class Meta:
+        model = SubPlan
+        fields = ("id", "name")
+
+
+class SubPlanReadSerializer(SubPlanBriefSerializer):
     """Serializer to read SubPlan"""
 
     discounted_price = SerializerMethodField()
 
-    class Meta:
-        model = SubPlan
-        fields = (
-            "id",
-            "name",
+    class Meta(SubPlanBriefSerializer.Meta):
+        fields = SubPlanBriefSerializer.Meta.fields + (
             "description",
             "duration_months",
             "price",
@@ -41,16 +47,12 @@ class SubscriptionCreateSerializer(ModelSerializer):
 
 
 class SubscriptionSerializer(SubscriptionCreateSerializer):
-    """Serializer to read, update (auto_new), delete Subcription"""
+    """Serializer to read, update (auto_renew), delete Subscription"""
 
-    plan = SerializerMethodField()
+    plan = SubPlanBriefSerializer(read_only=True)
 
-    class Meta(SubPlanReadSerializer.Meta):
-        read_only_fields = SubscriptionCreateSerializer.Meta.read_only_fields + (
-            "plan",
-        )
 
-    def get_plan(self, obj):
-        return SubPlanReadSerializer(
-            obj.plan, fields=("id", "name", "description")
-        ).data
+class YookassaPaymentCreateSerializer(serializers.Serializer):
+    """Serializer to create yookassa payment"""
+
+    return_url = serializers.URLField()
