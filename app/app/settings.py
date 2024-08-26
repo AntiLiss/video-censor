@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "362d-188-0-179-181.ngrok-free.app"]
 
 
 # Application definition
@@ -234,3 +234,8 @@ BAN_WORDS_DIR = os.path.join(BASE_DIR, "videojobs", "ban_words")
 
 # Dir to store indermediate media files
 TEMP_FILES_DIR = os.path.join("/", "tmp-files")
+
+
+# Yookassa settings
+YOOKASSA_ACCOUNT_ID = os.environ.get("YOOKASSA_ACCOUNT_ID")
+YOOKASSA_SECRET_KEY = os.environ.get("YOOKASSA_SECRET_KEY")

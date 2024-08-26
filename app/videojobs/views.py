@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
 from .models import VideoJob
+from .permissions import HasActiveSubscription
 from .serializers import VideoJobCreateSerializer, VideoJobReadSerializer
 from .tasks import censor_video
 
@@ -17,7 +18,7 @@ class VideojobViewSet(
 ):
     "Create, Read, Destroy videojobs"
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasActiveSubscription]
     queryset = VideoJob.objects.all()
     serializer_class = VideoJobReadSerializer
 

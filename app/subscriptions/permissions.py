@@ -8,7 +8,7 @@ from .models import Payment, Subscription
 
 class HasNoActiveSubscription(BasePermission):
     """
-    Allow user to create subscription only if he has no active one
+    Allow access only if the user has no active subscription
     """
 
     message = "You already have active subscription"
@@ -21,7 +21,7 @@ class HasNoActiveSubscription(BasePermission):
 
 class IsSubscriptionNotPaid(BasePermission):
     """
-    Allow to create payment only if the subscription isn't already paid
+    Allow access only if the subscription isn't already paid
     """
 
     message = "This subscription is already paid for"
@@ -30,7 +30,7 @@ class IsSubscriptionNotPaid(BasePermission):
         subscription_pk = view.kwargs.get("subscription_pk")
         subscription = get_object_or_404(Subscription, pk=subscription_pk)
         if Payment.objects.filter(
-            user=request.user,
+            # user=request.user,
             subscription=subscription,
             status__in=[Payment.PROCESSING, Payment.COMPLETED],
         ):
@@ -38,7 +38,7 @@ class IsSubscriptionNotPaid(BasePermission):
         return True
 
 
-class IsYokassaIP(BasePermission):
+class IsYookassaIP(BasePermission):
     """Allow access only to list of yokassa IPs"""
 
     message = "Your IP address is not allowed!"

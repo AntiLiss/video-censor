@@ -1,6 +1,8 @@
 import uuid
+from datetime import date
 
 import yookassa
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,11 +10,17 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from .models import Payment, SubPlan, Subscription
-from .permissions import (HasNoActiveSubscription, IsSubscriptionNotPaid,
-                          IsYokassaIP)
-from .serializers import (SubPlanReadSerializer, SubscriptionCreateSerializer,
-                          SubscriptionSerializer,
-                          YookassaPaymentCreateSerializer)
+from .permissions import HasNoActiveSubscription, IsSubscriptionNotPaid, IsYookassaIP
+from .serializers import (
+    SubPlanReadSerializer,
+    SubscriptionCreateSerializer,
+    SubscriptionSerializer,
+    YookassaPaymentCreateSerializer,
+)
+
+# Set Yookassa credentials
+yookassa.Configuration.account_id = settings.YOOKASSA_ACCOUNT_ID
+yookassa.Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
 
 
 class SubPlanReadViewSet(ReadOnlyModelViewSet):
@@ -38,7 +46,7 @@ class SubscriptionViewSet(ModelViewSet):
 
     def get_queryset(self):
         # Limit subscriptions to this user
-        return self.queryset.filter(user=self.request.user)
+        return self.queryset.filter(user=self.request.user, is_active=True)
 
     def get_serializer_class(self):
         # Change serializer based on action
@@ -93,7 +101,7 @@ class PaymentCreateView(APIView):
                 },
                 uuid.uuid4(),
             )
-            data = {"confirmation_url": yk_payment.confirmation.url}
+            data = {"confirmation_url": yk_payment.confirmation.confirmation_url}
             return Response(data, 201)
         except Exception as e:
             payment.status = payment.FAILED
@@ -102,24 +110,22 @@ class PaymentCreateView(APIView):
 
 
 class YookassaWebhookView(APIView):
-    """
-    Modify subscription and payment based on yookassa payment status
-    """
+    """Handle yookassa webhooks"""
 
-    permission_classes = [IsYokassaIP]
+    permission_classes = [IsYookassaIP]
 
     def post(self, request):
         payment_pk = request.data["object"]["metadata"]["payment_pk"]
-        subscription_pk = request.data["object"]["metadata"]["subscription_pk"]
-
         payment = get_object_or_404(Payment, pk=payment_pk)
+
+        subscription_pk = request.data["object"]["metadata"]["subscription_pk"]
         subscription = get_object_or_404(Subscription, pk=subscription_pk)
 
         # Complete payment and subscription if yokassa payment was successful
         if request.data["event"] == "payment.succeeded":
             payment.status = payment.COMPLETED
             payment.payment_method = request.data["object"]["payment_method"]["type"]
-            subscription.is_active = True
+            subscription.start_period()
         # Mark payment as failed if yokassa payment was canceled
         elif request.data["event"] == "payment.canceled":
             payment.status = payment.FAILED

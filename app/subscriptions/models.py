@@ -48,8 +48,8 @@ class Subscription(models.Model):
     plan = models.ForeignKey(SubPlan, null=True, on_delete=models.SET_NULL)
     auto_renew = models.BooleanField(blank=True, default=False)
     is_active = models.BooleanField(default=False)
-    start_date = models.DateField(blank=True, default=date.today)
-    end_date = models.DateField(blank=True)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -64,26 +64,22 @@ class Subscription(models.Model):
             raise ValidationError(msg)
 
     def save(self, *args, **kwargs):
-        # Set end_date at creation
-        if not self.pk:
-            self.end_date = self.__get_end_date()
         self.full_clean()
         return super().save(*args, **kwargs)
 
-    def __get_end_date(self):
-        return self.start_date + relativedelta(months=self.plan.duration_months)
+    def start_period(self):
+        """Set subscription as active and set dates"""
+        self.is_active = True
+        self.start_date = date.today()
+        self.end_date = self.start_date + relativedelta(
+            months=self.plan.duration_months
+        )
 
-    # TODO: Use just `is_active` field
-    # def is_current(self):
-    #     """Check is the subscription currently active"""
-    #     today = date.today()
-    #     return self.is_active and self.start_date <= today < self.end_date
-
-    def renew_period(self):
-        """Renew the subscription when it expires"""
-        if self.auto_renew:
-            self.start_date = self.end_date
-            self.end_date = self.__get_end_date()
+    # def renew_period(self):
+    #     """Renew the subscription when it expires"""
+    #     if self.auto_renew:
+    #         self.start_date = self.end_date
+    #         self.end_date = self.__get_end_date()
 
 
 class Payment(models.Model):
