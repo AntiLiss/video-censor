@@ -14,6 +14,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from celery.beat import crontab
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -224,10 +226,14 @@ SOCIALACCOUNT_PROVIDERS = {
 # Celery settings
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
-# CELERY_ACCEPT_CONTENT = ["json"]
-# CELERY_TASK_SERIALIZER = "json"
-# CELERY_RESULT_SERIALIZER = "json"
-# CELERY_TIMEZONE = "UTC"
+
+# Celery Beat settings
+CELERY_BEAT_SCHEDULE = {
+    "deactivate-expired-subscriptions-daily": {
+        "task": "subscriptions.tasks.deactivate_expired_subscriptions",
+        "schedule": crontab(hour=0, minute=0),  # Runs daily at midnight
+    },
+}
 
 # Dir to store txt files with ban words
 BAN_WORDS_DIR = os.path.join(BASE_DIR, "videojobs", "ban_words")

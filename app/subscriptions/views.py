@@ -116,9 +116,9 @@ class YookassaWebhookView(APIView):
 
     def post(self, request):
         payment_pk = request.data["object"]["metadata"]["payment_pk"]
-        payment = get_object_or_404(Payment, pk=payment_pk)
-
         subscription_pk = request.data["object"]["metadata"]["subscription_pk"]
+        
+        payment = get_object_or_404(Payment, pk=payment_pk)
         subscription = get_object_or_404(Subscription, pk=subscription_pk)
 
         # Complete payment and subscription if yokassa payment was successful
