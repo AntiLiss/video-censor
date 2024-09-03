@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "362d-188-0-179-181.ngrok-free.app"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "8832-188-0-179-70.ngrok-free.app"]
 
 
 # Application definition
@@ -236,7 +236,9 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 # Dir to store txt files with ban words
-BAN_WORDS_DIR = os.path.join(BASE_DIR, "videojobs", "ban_words")
+BAN_WORDS_DIR = os.path.join(STATIC_ROOT, "ban_words")
+
+DETECTION_MODEL_PATH = os.path.join(STATIC_ROOT, "gore-smoking-detector.pt")
 
 # Dir to store indermediate media files
 TEMP_FILES_DIR = os.path.join("/", "tmp-files")

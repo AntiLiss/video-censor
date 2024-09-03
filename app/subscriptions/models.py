@@ -75,12 +75,6 @@ class Subscription(models.Model):
             months=self.plan.duration_months
         )
 
-    # def renew_period(self):
-    #     """Renew the subscription when it expires"""
-    #     if self.auto_renew:
-    #         self.start_date = self.end_date
-    #         self.end_date = self.__get_end_date()
-
 
 class Payment(models.Model):
     """Payment model"""

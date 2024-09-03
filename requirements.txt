@@ -12,3 +12,4 @@ celery~=5.4.0
 redis~=5.0.8
 faster-whisper~=1.0.3
 pydub~=0.25.1
+ultralytics~=8.2.87

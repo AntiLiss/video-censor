@@ -18,9 +18,16 @@ class VideojobViewSet(
 ):
     "Create, Read, Destroy videojobs"
 
-    permission_classes = [IsAuthenticated, HasActiveSubscription]
+    permission_classes = [IsAuthenticated]
     queryset = VideoJob.objects.all()
     serializer_class = VideoJobReadSerializer
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [p() for p in self.permission_classes] + [
+                HasActiveSubscription(),
+            ]
+        return super().get_permissions()
 
     def get_serializer_class(self):
         # Switch serializer when create action

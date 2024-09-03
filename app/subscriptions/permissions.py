@@ -30,7 +30,6 @@ class IsSubscriptionNotPaid(BasePermission):
         subscription_pk = view.kwargs.get("subscription_pk")
         subscription = get_object_or_404(Subscription, pk=subscription_pk)
         if Payment.objects.filter(
-            # user=request.user,
             subscription=subscription,
             status__in=[Payment.PROCESSING, Payment.COMPLETED],
         ):

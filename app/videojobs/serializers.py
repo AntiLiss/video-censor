@@ -10,11 +10,10 @@ class VideoSettingSerializer(ModelSerializer):
 
     class Meta:
         model = VideoSetting
-        fields = ("bad_habits", "blood", "nudity")
+        fields = ("smoking", "gore")
         extra_kwargs = {
-            "bad_habits": {"default": False},
-            "blood": {"default": False},
-            "nudity": {"default": False},
+            "smoking": {"default": False},
+            "gore": {"default": False},
         }
 
 
@@ -36,8 +35,8 @@ class AudioSettingSerializer(ModelSerializer):
         # The string consists at least of 1 word.
         # Words are separated by comma.
         # Word consists of letters and/or digits.
-        # Words united by `-` or ` ` like `co-op` and `back end` are allowed
-        pattern = r"\b\w+([- ]\w+)*\b(,\b\w+([- ]\w+)*\b)*,?"
+        # Words united by `-` like `co-op` are allowed
+        pattern = r"\b\w+(-\w+)*\b(,\b\w+(-\w+)*\b)*,?"
 
         if own_words and (
             not re.fullmatch(pattern, own_words) or re.search(r"_", own_words)

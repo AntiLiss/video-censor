@@ -5,11 +5,13 @@ import sys
 from functools import lru_cache
 from uuid import uuid4
 
+import cv2
 from celery import shared_task
 from django.conf import settings
 from faster_whisper import WhisperModel
 from pydub import AudioSegment
 from pydub.generators import Sine
+from ultralytics import YOLO
 
 from .models import VideoJob
 from .utils import Singleton, UserOutputError, has_audio
@@ -52,7 +54,7 @@ class Transcriber(
 
     def __normalize_word(self, word):
         """Bring the word to the valid format"""
-        return re.sub(r"[^\w -]", "", word.lower().strip())
+        return re.sub(r"[^\w-]", "", word.lower().strip())
 
 
 class VideoSoundCensor:
@@ -62,7 +64,7 @@ class VideoSoundCensor:
         self.tmp_files_dir = tmp_files_dir
 
     def censor(self, input, ban_words, lang):
-        """Censor video's audio and return modified audio path"""
+        """Censor audio track and return modified audio path"""
         self.__raise_no_sound_error(input)
         self.__raise_no_ban_words_error(ban_words)
 
@@ -107,8 +109,38 @@ class VideoSoundCensor:
 
 
 class VideoPictureCensor:
-    def censor(self):
-        return
+    """Censor unwanted classes in video"""
+
+    def __init__(self, tmp_files_dir):
+        self.tmp_files_dir = tmp_files_dir
+
+    def censor(self, input, ban_classes):
+        """Censor video track and return modified video path"""
+        cap = cv2.VideoCapture(input)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        censored_video_path = os.path.join(self.tmp_files_dir, f"{uuid4()}.mp4")
+        out = cv2.VideoWriter(censored_video_path, fourcc, fps, (width, height))
+
+        model = YOLO(settings.DETECTION_MODEL_PATH)
+
+        for frame_data in model(input, classes=ban_classes, stream=True):
+            frame = frame_data.orig_img
+            for box in frame_data.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                frame[y1:y2, x1:x2] = cv2.GaussianBlur(
+                    frame[y1:y2, x1:x2], (151, 151), 0
+                )
+            out.write(frame)
+
+        # Release resources
+        cap.release()
+        out.release()
+
+        return censored_video_path
 
 
 class CensorshipProcessor:
@@ -138,7 +170,7 @@ class CensorshipProcessor:
 
         # Apply audio censorship if requested
         if self.__has_audio_setting():
-            ban_words = self.__collect_ban_words()
+            ban_words = self.__get_ban_words()
             censured_audio = VideoSoundCensor(self.tmp_files_dir).censor(
                 self.input_video_path,
                 ban_words,
@@ -147,7 +179,11 @@ class CensorshipProcessor:
 
         # Apply visual censorship if requested
         if self.__has_video_setting():
-            censured_picture = VideoPictureCensor().censor()
+            ban_classes = self.__get_ban_classes()
+            censured_picture = VideoPictureCensor(self.tmp_files_dir).censor(
+                self.input_video_path,
+                ban_classes,
+            )
 
         # Save the result to output path
         self.__save_censored_video(censured_picture, censured_audio)
@@ -166,7 +202,7 @@ class CensorshipProcessor:
     def __has_video_setting(self):
         return self.video_setting and self.video_setting.is_applied()
 
-    def __collect_ban_words(self):
+    def __get_ban_words(self):
         """Collect ban words from own_words and corresponding files"""
         ban_words = self.audio_setting.get_own_word_set()
 
@@ -192,6 +228,15 @@ class CensorshipProcessor:
             ban_words.update(pull_words_from_file(insult_file))
 
         return ban_words
+
+    def __get_ban_classes(self):
+        """Collect classes to ban in video"""
+        classes = []
+        if self.video_setting.gore:
+            classes.append(1)
+        if self.video_setting.smoking:
+            classes.append(3)
+        return classes
 
     def __save_video_as_is(self):
         """Save input video as is"""

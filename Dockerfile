@@ -39,6 +39,9 @@ RUN python -m venv /py && \
         /home  && \
     chmod +x /entrypoint.sh
 
+COPY ./ban_words /vol/web/static/ban_words
+COPY ./gore-smoking-detector.pt /vol/web/static
+
 ENV PATH="/py/bin:$PATH"
 
 USER main-user

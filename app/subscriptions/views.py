@@ -10,13 +10,11 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from .models import Payment, SubPlan, Subscription
-from .permissions import HasNoActiveSubscription, IsSubscriptionNotPaid, IsYookassaIP
-from .serializers import (
-    SubPlanReadSerializer,
-    SubscriptionCreateSerializer,
-    SubscriptionSerializer,
-    YookassaPaymentCreateSerializer,
-)
+from .permissions import (HasNoActiveSubscription, IsSubscriptionNotPaid,
+                          IsYookassaIP)
+from .serializers import (SubPlanReadSerializer, SubscriptionCreateSerializer,
+                          SubscriptionSerializer,
+                          YookassaPaymentCreateSerializer)
 
 # Set Yookassa credentials
 yookassa.Configuration.account_id = settings.YOOKASSA_ACCOUNT_ID

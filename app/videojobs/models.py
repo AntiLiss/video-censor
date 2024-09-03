@@ -41,8 +41,8 @@ class VideoJob(models.Model):
     )
 
     # Language choices
-    ENGLISH = "ru"
-    RUSSIAN = "en"
+    ENGLISH = "en"
+    RUSSIAN = "ru"
 
     LANG_CHOICES = (
         (ENGLISH, "English"),
@@ -111,16 +111,15 @@ class VideoJob(models.Model):
 
 
 class VideoSetting(models.Model):
-    bad_habits = models.BooleanField(default=False, blank=True)
-    blood = models.BooleanField(default=False, blank=True)
-    nudity = models.BooleanField(default=False, blank=True)
+    smoking = models.BooleanField(default=False, blank=True)
+    gore = models.BooleanField(default=False, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def is_applied(self):
         """Check if any field is set"""
-        return any((self.bad_habits, self.blood, self.nudity))
+        return any((self.smoking, self.gore))
 
 
 class AudioSetting(models.Model):
