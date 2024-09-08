@@ -3,9 +3,10 @@ FROM python:3.12.5-slim-bookworm
 ENV PYTHONUNBUFFERED=1
 
 COPY ./app /app
-COPY ./requirements.txt /tmp/
-COPY ./entrypoint.sh /
-COPY ./data/ban_words ./data/gore-smoking-detector.pt /vol/static/
+COPY ./requirements.txt /tmp/requirements.txt
+COPY ./entrypoint.sh /entrypoint.sh
+COPY ./data/ban_words /vol/static/ban_words
+COPY ./data/gore-smoking-detector.pt /vol/static/gore-smoking-detector.pt
 
 WORKDIR /app
 
