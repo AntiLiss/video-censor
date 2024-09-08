@@ -5,15 +5,14 @@ ENV PYTHONUNBUFFERED=1
 COPY ./app /app
 COPY ./requirements.txt /tmp/
 COPY ./entrypoint.sh /
+COPY ./data/ban_words ./data/gore-smoking-detector.pt /vol/static/
 
 WORKDIR /app
 
-EXPOSE 8000
-
-RUN python -m venv /py && \
-    /py/bin/pip install --upgrade pip && \
+RUN \
+    # Linux deps
     apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
         bash \
         postgresql-client \
         libpq-dev \
@@ -21,29 +20,19 @@ RUN python -m venv /py && \
         libffi-dev \
         ffmpeg \
         zlib1g-dev && \
-    /py/bin/pip install -r /tmp/requirements.txt && \
-    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -rf /tmp && \
+    # Python deps
+    pip install --upgrade pip && \
+    pip install -r /tmp/requirements.txt && \
+    rm -rf /tmp/* && \
+    # Create user and configure file system
+    mkdir -p /vol/media /tmp/tmp-files && \
     adduser --disabled-password main-user && \
-    mkdir -p /vol/web/static && \
-    mkdir -p /vol/web/media && \
-    mkdir -p /tmp-files && \
-    chown -R main-user:main-user \
-        /tmp-files \
-        /vol \
-        /home  && \
-    chmod -R 755 \
-        /tmp-files \
-        /vol \
-        /home  && \
-    chmod +x /entrypoint.sh
-
-COPY ./ban_words /vol/web/static/ban_words
-COPY ./gore-smoking-detector.pt /vol/web/static
-
-ENV PATH="/py/bin:$PATH"
+    chown -R main-user:main-user /vol /tmp/tmp-files /entrypoint.sh && \
+    chmod -R 775 /vol /tmp/tmp-files /entrypoint.sh
 
 USER main-user
+
+EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint.sh"]

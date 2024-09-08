@@ -140,10 +140,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "/static/static/"
-STATIC_ROOT = os.path.join("/", "vol", "web", "static")
+STATIC_ROOT = os.path.join("/", "vol", "static")
 
 MEDIA_URL = "/static/media/"
-MEDIA_ROOT = os.path.join("/", "vol", "web", "media")
+MEDIA_ROOT = os.path.join("/", "vol", "media")
 
 
 # Default primary key field type
@@ -157,7 +157,7 @@ AUTH_USER_MODEL = "users.User"
 
 
 # Email settings
-DEFAULT_FROM_EMAIL = "Meat market <email>"
+DEFAULT_FROM_EMAIL = "Videocensor <email>"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
@@ -241,7 +241,7 @@ BAN_WORDS_DIR = os.path.join(STATIC_ROOT, "ban_words")
 DETECTION_MODEL_PATH = os.path.join(STATIC_ROOT, "gore-smoking-detector.pt")
 
 # Dir to store indermediate media files
-TEMP_FILES_DIR = os.path.join("/", "tmp-files")
+TEMP_FILES_DIR = os.path.join("/", "tmp", "tmp-files")
 
 
 # Yookassa settings

@@ -121,20 +121,20 @@ class VideoPictureCensor:
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         censored_video_path = os.path.join(self.tmp_files_dir, f"{uuid4()}.mp4")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(censored_video_path, fourcc, fps, (width, height))
 
         model = YOLO(settings.DETECTION_MODEL_PATH)
 
+        # Blur frames with ban classes detected
         for frame_data in model(input, classes=ban_classes, stream=True):
-            frame = frame_data.orig_img
             for box in frame_data.boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-                frame[y1:y2, x1:x2] = cv2.GaussianBlur(
-                    frame[y1:y2, x1:x2], (151, 151), 0
+                frame_data.orig_img[y1:y2, x1:x2] = cv2.GaussianBlur(
+                    frame_data.orig_img[y1:y2, x1:x2], (151, 151), 0
                 )
-            out.write(frame)
+            out.write(frame_data.orig_img)
 
         # Release resources
         cap.release()
@@ -316,12 +316,12 @@ def censor_video(video_id):
         processor.run()
     except UserOutputError as e:
         error_msg = str(e)
-        print(f"\033[91m{error_msg}: {str(e)}\033[0m", file=sys.stderr)
+        print(f"\033[91m{'ERROR'}: {str(e)}\033[0m", file=sys.stderr)
     except Exception as e:
         error_msg = "Unexpected error"
-        print(f"\033[91m{error_msg}: {str(e)}\033[0m", file=sys.stderr)
+        print(f"\033[91m{'ERROR'}: {str(e)}\033[0m", file=sys.stderr)
     finally:
         # Remove created result file if error occurs
         if error_msg and os.path.isfile(output_path):
-            os.remove(output_path)
+            os.rm(output_path)
         complete_videojob(videojob, error_msg)
