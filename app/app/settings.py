@@ -241,7 +241,7 @@ BAN_WORDS_DIR = os.path.join(STATIC_ROOT, "ban_words")
 DETECTION_MODEL_PATH = os.path.join(STATIC_ROOT, "gore-smoking-detector.pt")
 
 # Dir to store indermediate media files
-TEMP_FILES_DIR = os.path.join("/", "tmp", "tmp-files")
+TMP_FILES_DIR = os.path.join("/", "tmp-files")
 
 
 # Yookassa settings

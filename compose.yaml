@@ -5,7 +5,7 @@ services:
       - 8000:8000
     volumes:
       - ./app:/app
-      - static-data:/vol/web
+      - static-data:/vol
     env_file:
       - .env
     command: >
@@ -32,7 +32,7 @@ services:
     command: celery -A app worker -l info
     volumes:
       - ./app:/app
-      - static-data:/vol/web
+      - static-data:/vol
     env_file:
       - .env
     depends_on:

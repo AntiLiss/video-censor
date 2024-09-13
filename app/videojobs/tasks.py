@@ -8,6 +8,7 @@ from uuid import uuid4
 import cv2
 from celery import shared_task
 from django.conf import settings
+from django.core.files import File
 from faster_whisper import WhisperModel
 from pydub import AudioSegment
 from pydub.generators import Sine
@@ -83,10 +84,7 @@ class VideoSoundCensor:
                 audio = audio[:start_ms] + beep_sound + audio[end_ms:]
 
         # Save censored audio as temporary file
-        censored_audio_path = os.path.join(
-            self.tmp_files_dir,
-            f"{uuid4()}.wav",
-        )
+        censored_audio_path = os.path.join(self.tmp_files_dir, f"{uuid4()}.wav")
         audio.export(censored_audio_path, format="wav")
         return censored_audio_path
 
@@ -127,7 +125,7 @@ class VideoPictureCensor:
 
         model = YOLO(settings.DETECTION_MODEL_PATH)
 
-        # Blur frames with ban classes detected
+        # Blur frames where ban classes detected
         for frame_data in model(input, classes=ban_classes, stream=True):
             for box in frame_data.boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
@@ -150,16 +148,15 @@ class CensorshipProcessor:
         self.videojob = videojob
         self.tmp_files_dir = tmp_files_dir
 
-        self.input_video_path = videojob.input_video.path
-        self.output_video_path = videojob.get_output_video_path()
-
         self.audio_setting = videojob.audio_setting
         self.video_setting = videojob.video_setting
 
+        self.input_video_path = videojob.input_video.path
+        self.result_path = os.path.join(tmp_files_dir, f"{uuid4()}.mp4")
+
     def run(self):
         """
-        Apply visual and audio censorship and save result video to output
-        path of videojob
+        Apply visual and audio censorship and save result video
         """
         # If no settings are specified save as is
         if not self.__has_audio_setting() and not self.__has_video_setting():
@@ -185,16 +182,16 @@ class CensorshipProcessor:
                 ban_classes,
             )
 
-        # Save the result to output path
+        # Save the censured video to result path
         self.__save_censored_video(censured_picture, censured_audio)
 
         # Clean up indermediate files
-        if censured_audio and os.path.isfile(censured_audio):
+        if os.path.isfile(str(censured_audio)):
             os.remove(censured_audio)
-        if censured_picture and os.path.isfile(censured_picture):
+        if os.path.isfile(str(censured_picture)):
             os.remove(censured_picture)
 
-        return None
+        return self.result_path
 
     def __has_audio_setting(self):
         return self.audio_setting and self.audio_setting.is_applied()
@@ -246,7 +243,7 @@ class CensorshipProcessor:
             '-i', self.input_video_path,
             '-c:v', 'copy',
             '-c:a', 'copy',
-            self.output_video_path,
+            self.result_path,
         ]
         # fmt: on
         subprocess.run(command)
@@ -263,27 +260,23 @@ class CensorshipProcessor:
             "-c:a", "aac" if censured_audio else 'copy',
             "-map", "0:v:0",
             *(["-map", "1:a:0"] if has_audio(self.input_video_path) else []),
-            self.output_video_path,
+            self.result_path,
         ]
         # fmt: on
         subprocess.run(command)
 
 
-def complete_videojob(videojob, error_msg=None):
+def complete_videojob(videojob, file_path, error_msg=None):
     """Update videojob fields and save instance"""
     if error_msg:
         videojob.status = videojob.FAILED
         videojob.error_message = error_msg
     else:
         videojob.status = videojob.COMPLETED
-        output_video_path = videojob.get_output_video_path()
-        # TODO: Save file to the field by creating a temporary file to follow
-        # Django rules and keep consistence
-        videojob.output_video = os.path.relpath(
-            output_video_path,
-            settings.MEDIA_ROOT,
-        )
-        videojob.size = round(os.path.getsize(output_video_path) / (2**20), 2)
+        with open(file_path, "rb") as f:
+            filename = os.path.basename(file_path)
+            videojob.output_video.save(filename, File(f))
+        videojob.size = round(os.path.getsize(file_path) / (2**20), 2)
 
     videojob.save()
 
@@ -296,24 +289,15 @@ def censor_video(video_id):
         "video_setting",
     ).get(id=video_id)
 
-    # Ensure dir for processed videos
-    output_path = videojob.get_output_video_path()
-    os.makedirs(
-        os.path.dirname(output_path),
-        exist_ok=True,
-    )
-
-    # Ensure dir for intermediate files for the user
-    tmp_files_dir = os.path.join(settings.TEMP_FILES_DIR, str(videojob.user.pk))
-    os.makedirs(
-        tmp_files_dir,
-        exist_ok=True,
-    )
+    # Create dir to store user's intermediate files
+    tmp_files_dir = os.path.join(settings.TMP_FILES_DIR, str(videojob.user.pk))
+    os.makedirs(tmp_files_dir, exist_ok=True)
 
     processor = CensorshipProcessor(videojob, tmp_files_dir)
     error_msg = None
+    result_path = None
     try:
-        processor.run()
+        result_path = processor.run()
     except UserOutputError as e:
         error_msg = str(e)
         print(f"\033[91m{'ERROR'}: {str(e)}\033[0m", file=sys.stderr)
@@ -321,7 +305,5 @@ def censor_video(video_id):
         error_msg = "Unexpected error"
         print(f"\033[91m{'ERROR'}: {str(e)}\033[0m", file=sys.stderr)
     finally:
-        # Remove created result file if error occurs
-        if error_msg and os.path.isfile(output_path):
-            os.rm(output_path)
-        complete_videojob(videojob, error_msg)
+        complete_videojob(videojob, result_path, error_msg)
+        os.remove(result_path)  # Clean up intermediate file

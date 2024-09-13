@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
-def get_input_video_path(instance, filename):
+def get_input_video_path(_, filename):
     """Generate path for input video"""
     return os.path.join("uploads", "videos", filename)
 
@@ -26,6 +26,11 @@ def validate_input_video_size(value):
     # Error if file size exceeds max size
     if size_mb > max_size_mb:
         raise ValidationError(f"File size exceeds {max_size_mb}MB!")
+
+
+def get_output_video_path(instance, filename=None):
+    """Generate path for output video"""
+    return os.path.join("processed_videos", instance.get_title())
 
 
 class VideoJob(models.Model):
@@ -60,7 +65,11 @@ class VideoJob(models.Model):
             validate_input_video_size,
         ],
     )
-    output_video = models.FileField(blank=True, null=True)
+    output_video = models.FileField(
+        blank=True,
+        null=True,
+        upload_to=get_output_video_path,
+    )
     title = models.CharField(max_length=255, blank=True)
     size = models.FloatField(blank=True, null=True)
     language = models.CharField(max_length=2, choices=LANG_CHOICES)
@@ -91,7 +100,8 @@ class VideoJob(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        self.title = self.get_title()
+        if not self.pk:
+            self.title = self.get_title()
         return super().save(*args, **kwargs)
 
     def get_title(self):
@@ -100,14 +110,6 @@ class VideoJob(models.Model):
         name = os.path.splitext(input_filename)[0]
         ext = os.path.splitext(input_filename)[1]
         return name + "_censored" + ext
-
-    def get_output_video_path(self):
-        """Generate absolute path for output file"""
-        return os.path.join(
-            settings.MEDIA_ROOT,
-            "processed_videos",
-            self.get_title(),
-        )
 
 
 class VideoSetting(models.Model):

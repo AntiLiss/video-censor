@@ -10,7 +10,6 @@ set -o nounset
 postgres_ready() {
 python << END
 import sys
-
 import psycopg2
 
 try:
